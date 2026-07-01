@@ -38,7 +38,7 @@ function navigate() {
   const container = document.getElementById('view-container');
   const viewTitle = document.getElementById('view-title');
 
-  if (hash === 'agents' && !currentUser.isSudo) {
+  if ((hash === 'agents' || hash === 'sources') && !currentUser.isSudo) {
     if (viewTitle) viewTitle.textContent = "Access Denied";
     if (container) {
       container.innerHTML = `
@@ -195,6 +195,10 @@ function renderLogin() {
     if (agentLink) {
       agentLink.style.display = currentUser.isSudo ? 'block' : 'none';
     }
+    const sourcesLink = document.querySelector('.sidebar-item[data-page="sources"]');
+    if (sourcesLink) {
+      sourcesLink.style.display = currentUser.isSudo ? 'block' : 'none';
+    }
 
     // Animate transition out
     const card = loginRoot.querySelector('.card');
@@ -236,6 +240,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const agentLink = document.querySelector('.sidebar-item[data-page="agents"]');
     if (agentLink) {
       agentLink.style.display = user.isSudo ? 'block' : 'none';
+    }
+    const sourcesLink = document.querySelector('.sidebar-item[data-page="sources"]');
+    if (sourcesLink) {
+      sourcesLink.style.display = user.isSudo ? 'block' : 'none';
     }
   }
 

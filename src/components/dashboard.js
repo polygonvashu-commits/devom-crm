@@ -30,6 +30,8 @@ export function renderDashboard(container) {
 
   const activeAgentsCount = mockAgents.filter(a => a.status === 'online' || a.status === 'busy').length;
 
+  const currentUser = JSON.parse(sessionStorage.getItem('devom_current_user') || '{}');
+
   // Render HTML structure
   container.innerHTML = `
     <div class="kpi-grid animate-on-scroll">
@@ -55,6 +57,7 @@ export function renderDashboard(container) {
       </div>
     </div>
 
+    ${currentUser.isSudo ? `
     <!-- Animated Lead Flow section -->
     <div class="card" style="margin-bottom: 40px; padding: 24px;">
       <h3 style="font-family: var(--font-headline); margin-bottom: 20px; color: var(--accent-color); font-size: 20px;">
@@ -117,8 +120,9 @@ export function renderDashboard(container) {
         </svg>
       </div>
     </div>
+    ` : ''}
 
-    <div class="dashboard-layout">
+    <div class="dashboard-layout" ${!currentUser.isSudo ? 'style="grid-template-columns: 1fr;"' : ''}>
       <!-- Chart section -->
       <div class="card" style="display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -133,6 +137,7 @@ export function renderDashboard(container) {
         </div>
       </div>
 
+      ${currentUser.isSudo ? `
       <!-- Donut / Sources break-down -->
       <div class="card">
         <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 20px;">Sources Distribution</h3>
@@ -140,6 +145,7 @@ export function renderDashboard(container) {
           <canvas id="donutChart"></canvas>
         </div>
       </div>
+      ` : ''}
     </div>
 
     <!-- Bottom row: Recent Activity & Top Agents -->
@@ -171,7 +177,7 @@ export function renderDashboard(container) {
   animateCounter(document.getElementById('kpi-agents'), activeAgentsCount);
 
   // Initialize Charts
-  initCharts();
+  initCharts(currentUser.isSudo);
 
   // Populate Activity Feed
   populateActivities();
@@ -180,9 +186,10 @@ export function renderDashboard(container) {
   populateLeaderboard();
 }
 
-function initCharts() {
+function initCharts(isSudo) {
   const trendCtx = document.getElementById('trendChart').getContext('2d');
-  const donutCtx = document.getElementById('donutChart').getContext('2d');
+  const donutCanvas = document.getElementById('donutChart');
+  const donutCtx = donutCanvas ? donutCanvas.getContext('2d') : null;
 
   // Lead trends over last 7 days (mock dates)
   const labels7D = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -216,35 +223,37 @@ function initCharts() {
     }
   });
 
-  // Source distribution
-  const metaCount = mockLeads.filter(l => l.source === 'meta_ads').length;
-  const googleCount = mockLeads.filter(l => l.source === 'google_ads').length;
-  const websiteCount = mockLeads.filter(l => l.source === 'website').length;
-  const socialCount = mockLeads.filter(l => l.source === 'social_media').length;
+  if (isSudo && donutCtx) {
+    // Source distribution
+    const metaCount = mockLeads.filter(l => l.source === 'meta_ads').length;
+    const googleCount = mockLeads.filter(l => l.source === 'google_ads').length;
+    const websiteCount = mockLeads.filter(l => l.source === 'website').length;
+    const socialCount = mockLeads.filter(l => l.source === 'social_media').length;
 
-  new Chart(donutCtx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Meta Ads', 'Google Ads', 'Website', 'Social Media'],
-      datasets: [{
-        data: [metaCount, googleCount, websiteCount, socialCount],
-        backgroundColor: ['#3b82f6', '#ea4335', '#C5A059', '#e1306c'],
-        borderWidth: 0,
-        hoverOffset: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: '#F0F4F8', font: { family: 'Inter', size: 12 } }
-        }
+    new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Meta Ads', 'Google Ads', 'Website', 'Social Media'],
+        datasets: [{
+          data: [metaCount, googleCount, websiteCount, socialCount],
+          backgroundColor: ['#3b82f6', '#ea4335', '#C5A059', '#e1306c'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
       },
-      cutout: '70%'
-    }
-  });
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: '#F0F4F8', font: { family: 'Inter', size: 12 } }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
 
   // Handle toggle buttons
   document.querySelectorAll('.trend-toggle').forEach(btn => {

@@ -23,6 +23,13 @@ export function openLeadDetail(lead, onClose) {
   const circ = 2 * Math.PI * radius;
   const strokeDashoffset = circ - (lead.score / 100) * circ;
 
+  // Clean and prepare WhatsApp link details
+  const currentUser = JSON.parse(sessionStorage.getItem('devom_current_user') || '{}');
+  const activeAgentName = currentUser.name || 'Priya';
+  const waPhone = lead.phone.replace(/[^0-9]/g, '');
+  const waPhoneWithCountry = waPhone.length === 10 ? `91${waPhone}` : waPhone;
+  const waText = encodeURIComponent(`Hi ${lead.name}, this is ${activeAgentName} from DEV OM Group regarding your interest in ${lead.intent}.`);
+
   content.innerHTML = `
     <!-- Slideout Header -->
     <div style="margin-bottom: 24px; border-bottom: 1px solid rgba(240,244,248,0.08); padding-bottom: 20px;">
@@ -128,9 +135,10 @@ export function openLeadDetail(lead, onClose) {
     </div>
 
     <!-- Quick action buttons -->
-    <div style="display: flex; gap: 12px;">
-      <a href="tel:${lead.phone}" class="btn btn-primary" style="flex: 1; justify-content: center;"><i class="fa-solid fa-phone"></i> Call Now</a>
-      <a href="mailto:${lead.email}" class="btn btn-secondary" style="flex: 1; justify-content: center;"><i class="fa-regular fa-envelope"></i> Email</a>
+    <div style="display: flex; gap: 8px;">
+      <a href="tel:${lead.phone}" class="btn btn-primary" style="flex: 1; justify-content: center; font-size: 12px; padding: 10px 4px;"><i class="fa-solid fa-phone"></i> Call</a>
+      <a href="https://wa.me/${waPhoneWithCountry}?text=${waText}" target="_blank" class="btn btn-secondary" style="flex: 1.4; justify-content: center; font-size: 12px; padding: 10px 4px; background: rgba(37, 211, 102, 0.15); color: #25d366; border: 1px solid rgba(37, 211, 102, 0.3);"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+      <a href="mailto:${lead.email}" class="btn btn-secondary" style="flex: 1; justify-content: center; font-size: 12px; padding: 10px 4px;"><i class="fa-regular fa-envelope"></i> Email</a>
     </div>
   `;
 
