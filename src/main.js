@@ -3,6 +3,7 @@ import { renderLeadsTable } from './components/leadTable.js';
 import { renderKanbanBoard } from './components/kanban.js';
 import { renderAgentPanel } from './components/agentPanel.js';
 import { renderSourcesPanel } from './components/sources.js';
+import { renderDemoFormView } from './components/demoForm.js';
 import { initScrollAnimations } from './utils/animations.js';
 
 // Authentication State
@@ -14,16 +15,42 @@ const routes = {
   leads: { title: "Lead Management Hub", render: renderLeadsTable },
   pipeline: { title: "Sales Pipeline Kanban", render: renderKanbanBoard },
   agents: { title: "Agent Assignment & Performance", render: renderAgentPanel },
-  sources: { title: "Omni-Channel Lead Sources", render: renderSourcesPanel }
+  sources: { title: "Omni-Channel Lead Sources", render: renderSourcesPanel },
+  'demo-form': { title: "Public Lead Capture Form", render: renderDemoFormView }
 };
 
 function navigate() {
+  const hash = window.location.hash.replace('#', '') || 'dashboard';
+
+  // Restore layout parameters in case of navigation away from public form
+  const sidebar = document.querySelector('.sidebar');
+  const header = document.querySelector('.header-bar');
+  if (sidebar) sidebar.style.display = isAuthenticated ? 'flex' : 'none';
+  if (header) header.style.display = isAuthenticated ? 'flex' : 'none';
+
+  // Public unauthenticated access bypass
+  if (hash === 'demo-form') {
+    const route = routes[hash];
+    const container = document.getElementById('view-container');
+    const viewTitle = document.getElementById('view-title');
+    const appRoot = document.getElementById('app-root');
+    const loginRoot = document.getElementById('login-root');
+    
+    if (loginRoot) loginRoot.style.display = 'none';
+    if (appRoot) appRoot.style.display = 'flex';
+    
+    if (sidebar) sidebar.style.display = isAuthenticated ? 'flex' : 'none';
+    if (header) header.style.display = isAuthenticated ? 'flex' : 'none';
+
+    if (viewTitle) viewTitle.textContent = route.title;
+    if (container) route.render(container);
+    return;
+  }
+
   if (!isAuthenticated) {
     renderLogin();
     return;
   }
-
-  const hash = window.location.hash.replace('#', '') || 'dashboard';
   
   if (hash === 'logout') {
     isAuthenticated = false;

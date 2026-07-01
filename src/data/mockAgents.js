@@ -1,12 +1,12 @@
-export const mockAgents = [
+const defaultAgents = [
   {
     id: "agent_1",
     name: "Amit Kumar",
     avatar: "AK",
     email: "amit.kumar@devomgroup.in",
     phone: "+91 98123 45678",
-    activeLeads: 14,
-    totalLeads: 120,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 26.5,
     avgFollowUpHours: 1.2,
     status: "online",
@@ -18,8 +18,8 @@ export const mockAgents = [
     avatar: "PS",
     email: "priya.sharma@devomgroup.in",
     phone: "+91 98234 56789",
-    activeLeads: 18,
-    totalLeads: 145,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 28.2,
     avgFollowUpHours: 0.8,
     status: "online",
@@ -31,8 +31,8 @@ export const mockAgents = [
     avatar: "RM",
     email: "rajesh.mehta@devomgroup.in",
     phone: "+91 98345 67890",
-    activeLeads: 12,
-    totalLeads: 98,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 22.0,
     avgFollowUpHours: 2.1,
     status: "busy",
@@ -44,8 +44,8 @@ export const mockAgents = [
     avatar: "AG",
     email: "ananya.gupta@devomgroup.in",
     phone: "+91 98456 78901",
-    activeLeads: 15,
-    totalLeads: 110,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 24.5,
     avgFollowUpHours: 1.5,
     status: "online",
@@ -57,8 +57,8 @@ export const mockAgents = [
     avatar: "VM",
     email: "vikram.malhotra@devomgroup.in",
     phone: "+91 98567 89012",
-    activeLeads: 9,
-    totalLeads: 75,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 19.5,
     avgFollowUpHours: 2.5,
     status: "offline",
@@ -70,8 +70,8 @@ export const mockAgents = [
     avatar: "SR",
     email: "sonia.rao@devomgroup.in",
     phone: "+91 98678 90123",
-    activeLeads: 16,
-    totalLeads: 130,
+    activeLeads: 0,
+    totalLeads: 0,
     conversionRate: 25.8,
     avgFollowUpHours: 1.1,
     status: "online",
@@ -79,9 +79,30 @@ export const mockAgents = [
   }
 ];
 
+export const mockAgents = [];
+
 export const adminUser = {
   name: "Naveen Rathee",
   role: "Administrator",
   avatar: "NR",
   email: "naveen.rathee@devomgroup.in"
 };
+
+export function saveAgentsToStorage() {
+  localStorage.setItem('devom_agents', JSON.stringify(mockAgents));
+}
+
+// Load agents from storage or initialize with defaults
+const storedAgents = localStorage.getItem('devom_agents');
+if (storedAgents) {
+  try {
+    const parsed = JSON.parse(storedAgents);
+    mockAgents.length = 0;
+    mockAgents.push(...parsed);
+  } catch (e) {
+    console.error("Failed to load agents from localStorage, using defaults.", e);
+  }
+} else {
+  mockAgents.push(...defaultAgents);
+  saveAgentsToStorage();
+}

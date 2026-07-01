@@ -1,6 +1,7 @@
-import { mockAgents } from '../data/mockAgents.js';
+import { mockAgents, saveAgentsToStorage } from '../data/mockAgents.js';
 import { mockLeads, saveLeadsToStorage } from '../data/mockLeads.js';
 import { roundRobin } from '../utils/roundRobin.js';
+import { calculateLeadScore, getScoreLabel } from '../utils/leadScoring.js';
 
 let agentPerformanceChart = null;
 let agentResponseTimeChart = null;
@@ -18,41 +19,35 @@ export function renderAgentPanel(container) {
         <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 20px; color: var(--accent-color);">
           <i class="fa-solid fa-rotate"></i> Automated Lead Router (Round-Robin)
         </h3>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
           <div>
-            <p style="font-size: 14px; font-weight: 500;">Status: <span style="color: var(--status-won); font-weight: 700;">ACTIVE</span></p>
-            <p style="font-size: 12px; color: var(--text-muted);">Incoming leads are automatically assigned to the next online agent.</p>
+            <h4 style="font-size: 15px; font-weight: 700;">Queue Routing State</h4>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Instantly assign incoming ads/web leads to online agents in cycles.</p>
           </div>
-          <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
-            <input type="checkbox" checked id="rr-toggle-switch" style="opacity: 0; width: 0; height: 0;">
-            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--accent-color); transition: .4s; border-radius: 34px;"></span>
+          <label class="switch">
+            <input type="checkbox" id="rr-toggle-switch" checked>
+            <span class="slider round"></span>
           </label>
         </div>
 
-        <div style="background: rgba(240, 244, 248, 0.03); border: 1px solid rgba(240,244,248,0.08); padding: 16px; border-radius: 8px;">
-          <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.5px;">Assignment Queue Order</h4>
-          <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 8px;" id="queue-order-list">
-            <!-- Populated dynamically -->
-          </div>
+        <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 12px;">Active Queue Order</h4>
+        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;" id="queue-order-list">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
-      <!-- Admin Manual Override Panel (Naveen Rathee) -->
+      <!-- Manual Assignment Override Panel -->
       <div class="card">
-        <h3 style="font-family: var(--font-headline); margin-bottom: 16px; font-size: 20px; color: var(--accent-color);">
-          <i class="fa-solid fa-user-gear"></i> Admin Override Panel
+        <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 20px; color: var(--accent-color);">
+          <i class="fa-solid fa-user-gear"></i> Manual Lead Assignment Override
         </h3>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
-          As Super Administrator, <strong>Mr. Naveen Rathee</strong> can manually override automated routing to assign high-priority leads.
-        </p>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="form-group" style="margin-bottom: 0;">
               <label for="override-lead-select">Select Active Lead</label>
               <select id="override-lead-select" class="form-control">
-                <option value="">-- Select Active Lead --</option>
-                ${unassignedLeads.map(l => `<option value="${l.id}">${l.name} (${l.intent} - ${l.scoreLabel.toUpperCase()})</option>`).join('')}
+                <option value="">-- Choose Lead --</option>
+                ${unassignedLeads.map(l => `<option value="${l.id}">${l.name} (${l.intent})</option>`).join('')}
               </select>
             </div>
             
@@ -73,6 +68,98 @@ export function renderAgentPanel(container) {
 
     </div>
 
+    <!-- Quick Admin Actions: Add Lead & Add Agent -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px;">
+      
+      <!-- Quick Ingest Lead Card -->
+      <div class="card" style="padding: 24px; display: flex; flex-direction: column;">
+        <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 20px; color: var(--accent-color);">
+          <i class="fa-solid fa-user-plus"></i> Ingest New Lead (Admin)
+        </h3>
+        <form id="admin-add-lead-form" style="display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: space-between;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Full Name</label>
+                <input type="text" id="admin-lead-name" class="form-control" required placeholder="e.g. Sameer Sen">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Phone Number</label>
+                <input type="text" id="admin-lead-phone" class="form-control" required placeholder="+91 XXXXX XXXXX">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Property Interest</label>
+                <select id="admin-lead-intent" class="form-control">
+                  <option value="Luxury Villa">Luxury Villa</option>
+                  <option value="Premium Apartment">Premium Apartment</option>
+                  <option value="Commercial Space">Commercial Space</option>
+                  <option value="Plots & Land">Plots & Land</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Budget</label>
+                <select id="admin-lead-budget" class="form-control">
+                  <option value="₹1.5 - 2.0 Cr">₹1.5 - 2.0 Cr</option>
+                  <option value="₹3.5 - 4.5 Cr">₹3.5 - 4.5 Cr</option>
+                  <option value="₹5.5 - 6.5 Cr">₹5.5 - 6.5 Cr</option>
+                  <option value="₹8.0 - 10.0 Cr">₹8.0 - 10.0 Cr</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 15px; align-self: flex-start;">
+            <i class="fa-solid fa-plus"></i> Ingest Lead
+          </button>
+        </form>
+      </div>
+
+      <!-- Add New Agent Card -->
+      <div class="card" style="padding: 24px; display: flex; flex-direction: column;">
+        <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 20px; color: var(--accent-color);">
+          <i class="fa-solid fa-user-plus"></i> Add New Agent
+        </h3>
+        <form id="admin-add-agent-form" style="display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: space-between;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Agent Name</label>
+                <input type="text" id="admin-agent-name" class="form-control" required placeholder="e.g. Rahul Verma">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Email Address</label>
+                <input type="email" id="admin-agent-email" class="form-control" required placeholder="rahul@devomgroup.in">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Specialization</label>
+                <select id="admin-agent-spec" class="form-control">
+                  <option value="Luxury Villas">Luxury Villas</option>
+                  <option value="Premium Apartments">Premium Apartments</option>
+                  <option value="Commercial Space">Commercial Space</option>
+                  <option value="Plots & Land">Plots & Land</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Status</label>
+                <select id="admin-agent-status" class="form-control">
+                  <option value="online">Online</option>
+                  <option value="busy">Busy</option>
+                  <option value="offline">Offline</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 15px; align-self: flex-start;">
+            <i class="fa-solid fa-plus"></i> Add Agent
+          </button>
+        </form>
+      </div>
+
+    </div>
+
     <!-- Main Grid: Agent Roster Cards -->
     <h3 style="font-family: var(--font-headline); margin-bottom: 20px; font-size: 24px; border-bottom: 1px solid rgba(240, 244, 248, 0.08); padding-bottom: 8px;">
       Agent Performance Roster
@@ -80,22 +167,24 @@ export function renderAgentPanel(container) {
     
     <div class="agent-grid animate-on-scroll" style="margin-bottom: 40px;">
       ${mockAgents.map(agent => {
-        const isOnline = agent.status === 'online';
-        const isBusy = agent.status === 'busy';
-        
         return `
           <div class="card agent-card">
-            <div class="agent-header">
-              <div class="profile-avatar" style="width: 48px; height: 48px; font-size: 16px; background: var(--accent-gradient); color: var(--primary-dark); font-weight: 700;">
-                ${agent.avatar}
-              </div>
-              <div>
-                <h4 style="font-size: 16px; font-weight: 700;">${agent.name}</h4>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                  <span class="online-dot ${agent.status}"></span>
-                  ${agent.status.toUpperCase()} • ${agent.specialization}
+            <div class="agent-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div class="profile-avatar" style="width: 48px; height: 48px; font-size: 16px; background: var(--accent-gradient); color: var(--primary-dark); font-weight: 700;">
+                  ${agent.avatar}
+                </div>
+                <div>
+                  <h4 style="font-size: 16px; font-weight: 700;">${agent.name}</h4>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                    <span class="online-dot ${agent.status}"></span>
+                    ${agent.status.toUpperCase()} • ${agent.specialization}
+                  </div>
                 </div>
               </div>
+              <button class="btn btn-secondary btn-sm edit-agent-btn" data-id="${agent.id}" style="padding: 4px 8px; font-size: 11px;">
+                <i class="fa-regular fa-pen-to-square"></i> Edit
+              </button>
             </div>
 
             <div class="agent-meta">
@@ -135,6 +224,44 @@ export function renderAgentPanel(container) {
         <div style="flex: 1; min-height: 250px; position: relative;">
           <canvas id="agentResponseTimeChart"></canvas>
         </div>
+      </div>
+    </div>
+
+    <!-- Edit Agent Modal -->
+    <div id="edit-agent-modal" class="detail-overlay" style="display: none; align-items: center; justify-content: center; background: rgba(9, 27, 46, 0.75); z-index: 100000;">
+      <div class="card" style="width: 450px; padding: 30px; position: relative; border: 1px solid var(--accent-color);">
+        <button class="detail-close" id="close-edit-agent-modal" style="top: 16px; right: 16px;">&times;</button>
+        <h3 style="font-family: var(--font-headline); color: var(--accent-color); margin-bottom: 20px; font-size: 20px;">
+          <i class="fa-solid fa-user-pen"></i> Edit Agent Details
+        </h3>
+        
+        <form id="edit-agent-form" style="display: flex; flex-direction: column; gap: 16px;">
+          <input type="hidden" id="edit-agent-id">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Agent Name</label>
+            <input type="text" id="edit-agent-name" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Specialization</label>
+            <select id="edit-agent-spec" class="form-control">
+              <option value="Luxury Villas">Luxury Villas</option>
+              <option value="Premium Apartments">Premium Apartments</option>
+              <option value="Commercial Space">Commercial Space</option>
+              <option value="Plots & Land">Plots & Land</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Routing Status</label>
+            <select id="edit-agent-status" class="form-control">
+              <option value="online">Online</option>
+              <option value="busy">Busy</option>
+              <option value="offline">Offline</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 10px; justify-content: center; width: 100%;">
+            <i class="fa-solid fa-floppy-disk"></i> Save Agent Changes
+          </button>
+        </form>
       </div>
     </div>
   `;
@@ -182,6 +309,145 @@ export function renderAgentPanel(container) {
       renderAgentPanel(container);
     }
   });
+
+  // Bind admin-add-lead-form submission
+  document.getElementById('admin-add-lead-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('admin-lead-name').value.trim();
+    const phone = document.getElementById('admin-lead-phone').value.trim();
+    const intent = document.getElementById('admin-lead-intent').value;
+    const budget = document.getElementById('admin-lead-budget').value;
+
+    const score = calculateLeadScore(intent, budget, 'website');
+    const scoreLabel = getScoreLabel(score);
+
+    let assignedAgentId = null;
+    const assignedAgent = roundRobin.assignNextLead(name, intent);
+    if (assignedAgent) {
+      assignedAgentId = assignedAgent.id;
+      assignedAgent.activeLeads += 1;
+    }
+
+    const newLead = {
+      id: `lead_${Date.now()}`,
+      name,
+      email: `${name.toLowerCase().replace(/\s+/g, '.')}@inquiry.com`,
+      phone,
+      source: 'website',
+      status: 'new',
+      score,
+      scoreLabel,
+      intent,
+      assignedAgent: assignedAgentId,
+      budget,
+      location: 'Ingested via Admin Console',
+      createdAt: new Date().toISOString(),
+      lastContact: new Date().toISOString(),
+      propertyInterest: `Luxury Property Interest: ${intent}`,
+      notes: 'Lead created via Administrator Quick Ingestion Panel.',
+      timeline: [
+        { date: new Date().toISOString(), type: 'system', text: 'Lead manually entered via Admin Panel.' }
+      ]
+    };
+
+    if (assignedAgent) {
+      newLead.timeline.unshift({
+        date: new Date().toISOString(),
+        type: 'system',
+        text: `Automatically assigned to ${assignedAgent.name} (Round-Robin)`
+      });
+    }
+
+    mockLeads.unshift(newLead);
+    saveLeadsToStorage();
+    alert(`Lead "${name}" successfully ingested and assigned!`);
+    
+    renderAgentPanel(container);
+  });
+
+  // Bind admin-add-agent-form submission
+  document.getElementById('admin-add-agent-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('admin-agent-name').value.trim();
+    const email = document.getElementById('admin-agent-email').value.trim();
+    const spec = document.getElementById('admin-agent-spec').value;
+    const status = document.getElementById('admin-agent-status').value;
+
+    // Get initials for avatar
+    const nameParts = name.split(' ');
+    const avatar = nameParts.map(p => p[0]).join('').toUpperCase().substring(0, 2);
+
+    const newAgent = {
+      id: `agent_${Date.now()}`,
+      name,
+      avatar,
+      email,
+      phone: "+91 99999 XXXXX",
+      activeLeads: 0,
+      totalLeads: 0,
+      conversionRate: 25.0,
+      avgFollowUpHours: 1.0,
+      status,
+      specialization: spec
+    };
+
+    mockAgents.push(newAgent);
+    saveAgentsToStorage();
+    alert(`Agent "${name}" successfully added to the roster!`);
+    
+    renderAgentPanel(container);
+  });
+
+  // Bind Edit Agent click handlers
+  document.querySelectorAll('.edit-agent-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const agentId = btn.dataset.id;
+      const agent = mockAgents.find(a => a.id === agentId);
+
+      if (agent) {
+        document.getElementById('edit-agent-id').value = agent.id;
+        document.getElementById('edit-agent-name').value = agent.name;
+        document.getElementById('edit-agent-spec').value = agent.specialization;
+        document.getElementById('edit-agent-status').value = agent.status;
+
+        // Show Modal
+        document.getElementById('edit-agent-modal').style.display = 'flex';
+      }
+    });
+  });
+
+  // Bind Close Edit Agent modal
+  const closeEditModal = () => {
+    document.getElementById('edit-agent-modal').style.display = 'none';
+  };
+  const closeBtn = document.getElementById('close-edit-agent-modal');
+  if (closeBtn) closeBtn.addEventListener('click', closeEditModal);
+
+  // Bind Submit edit-agent-form
+  document.getElementById('edit-agent-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const agentId = document.getElementById('edit-agent-id').value;
+    const name = document.getElementById('edit-agent-name').value.trim();
+    const spec = document.getElementById('edit-agent-spec').value;
+    const status = document.getElementById('edit-agent-status').value;
+
+    const agent = mockAgents.find(a => a.id === agentId);
+    if (agent) {
+      agent.name = name;
+      agent.specialization = spec;
+      agent.status = status;
+
+      // Update avatar initials if name changed
+      const nameParts = name.split(' ');
+      agent.avatar = nameParts.map(p => p[0]).join('').toUpperCase().substring(0, 2);
+
+      saveAgentsToStorage();
+      closeEditModal();
+      alert(`Agent "${name}" changes saved successfully!`);
+      renderAgentPanel(container);
+    }
+  });
 }
 
 function renderQueueOrder() {
@@ -213,6 +479,10 @@ function initAgentCharts() {
   const names = mockAgents.map(a => a.name.split(' ')[0]);
   const rates = mockAgents.map(a => a.conversionRate);
   const speeds = mockAgents.map(a => a.avgFollowUpHours);
+
+  // Clean old charts if they exist
+  if (agentPerformanceChart) agentPerformanceChart.destroy();
+  if (agentResponseTimeChart) agentResponseTimeChart.destroy();
 
   // Performance comparison bar chart
   agentPerformanceChart = new Chart(perfCtx, {
