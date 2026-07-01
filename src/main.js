@@ -27,15 +27,34 @@ function navigate() {
   
   if (hash === 'logout') {
     isAuthenticated = false;
+    sessionStorage.removeItem('devom_current_user');
     window.location.hash = '';
     renderLogin();
     return;
   }
 
-  const route = routes[hash];
+  // RBAC Access Restriction
+  const currentUser = JSON.parse(sessionStorage.getItem('devom_current_user') || '{}');
   const container = document.getElementById('view-container');
   const viewTitle = document.getElementById('view-title');
 
+  if (hash === 'agents' && !currentUser.isSudo) {
+    if (viewTitle) viewTitle.textContent = "Access Denied";
+    if (container) {
+      container.innerHTML = `
+        <div class="card" style="padding: 40px; text-align: center;">
+          <div style="font-size: 48px; color: var(--status-lost); margin-bottom: 20px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <h3 style="font-family: var(--font-headline); font-size: 24px; color: var(--text-light); margin-bottom: 12px;">Restricted View</h3>
+          <p style="color: var(--text-muted); font-size: 14px; max-width: 400px; margin: 0 auto; line-height: 1.6;">
+            The Agent Engine performance console and manual reassignment overrides are restricted to Owner/Sudo Administrators only.
+          </p>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  const route = routes[hash];
   if (!container) return;
 
   if (route) {
@@ -76,20 +95,20 @@ function renderLogin() {
       <div style="position: absolute; width: 100%; height: 100%; opacity: 0.04; pointer-events: none; background-image: radial-gradient(circle at 100% 0%, var(--accent-color) 1px, transparent 1px), radial-gradient(circle at 0% 100%, var(--accent-color) 1px, transparent 1px); background-size: 40px 40px;"></div>
 
       <!-- Glassmorphic Login Card -->
-      <div class="card" style="width: 400px; padding: 40px; background: rgba(15, 41, 66, 0.85); border: 1px solid var(--glass-border); box-shadow: 0 20px 50px rgba(9, 27, 46, 0.6); display: flex; flex-direction: column; align-items: center; animation: loginCardIn 0.8s var(--ease-expo) forwards; transform: translateZ(0);">
+      <div class="card" style="width: 420px; padding: 40px; background: rgba(15, 41, 66, 0.85); border: 1px solid var(--glass-border); box-shadow: 0 20px 50px rgba(9, 27, 46, 0.6); display: flex; flex-direction: column; align-items: center; animation: loginCardIn 0.8s var(--ease-expo) forwards; transform: translateZ(0);">
         
         <h1 style="font-family: var(--font-headline); font-size: 28px; color: var(--accent-color); text-align: center; margin-bottom: 4px; font-weight: 700; letter-spacing: 1px;">DEV OM Group</h1>
-        <span style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 3px; margin-bottom: 30px;">LUXURY REAL ESTATE CRM</span>
+        <span style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 3px; margin-bottom: 24px;">LUXURY REAL ESTATE CRM</span>
         
-        <form id="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+        <form id="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
           <div class="form-group" style="margin-bottom: 0;">
             <label for="login-email">Email Address</label>
-            <input type="email" id="login-email" class="form-control" value="naveen.rathee@devomgroup.in" required style="width: 100%;">
+            <input type="email" id="login-email" class="form-control" placeholder="name@devomgroup.in" required style="width: 100%;">
           </div>
           
           <div class="form-group" style="margin-bottom: 0;">
             <label for="login-password">Password</label>
-            <input type="password" id="login-password" class="form-control" value="••••••••" required style="width: 100%;">
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required style="width: 100%;">
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 4px;">
@@ -99,10 +118,23 @@ function renderLogin() {
             <a href="#" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-color)'" onmouseout="this.style.color='var(--text-muted)'">Forgot Password?</a>
           </div>
 
+          <div id="login-error-msg" style="display: none; color: var(--status-lost); font-size: 12px; text-align: center; font-weight: 500; margin-top: 4px;">
+            <i class="fa-solid fa-circle-exclamation"></i> Invalid Email or Password.
+          </div>
+
           <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px;">
             <i class="fa-solid fa-right-to-bracket"></i> Sign In to Dashboard
           </button>
         </form>
+        
+        <div style="margin-top: 24px; border-top: 1px solid rgba(240,244,248,0.08); padding-top: 16px; width: 100%; text-align: center;">
+          <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Demo Credentials</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; text-align: left; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; border: 1px solid rgba(240,244,248,0.05);">
+            <div><strong>Sudo Admin:</strong> <span style="color: var(--accent-color);">naveen.rathee@devomgroup.in</span> / admin123</div>
+            <div><strong>Agent:</strong> <span style="color: var(--status-new);">priya.sharma@devomgroup.in</span> / agent123</div>
+          </div>
+        </div>
+
       </div>
     </div>
   `;
@@ -121,6 +153,49 @@ function renderLogin() {
   document.getElementById('login-form').addEventListener('submit', (e) => {
     e.preventDefault();
     
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+    const errorMsg = document.getElementById('login-error-msg');
+
+    let currentUser = null;
+
+    if (email === 'naveen.rathee@devomgroup.in' && password === 'admin123') {
+      currentUser = {
+        name: "Naveen Rathee",
+        role: "Super Administrator",
+        avatar: "NR",
+        email: "naveen.rathee@devomgroup.in",
+        isSudo: true
+      };
+    } else if (email === 'priya.sharma@devomgroup.in' && password === 'agent123') {
+      currentUser = {
+        name: "Priya Sharma",
+        role: "Sales Agent",
+        avatar: "PS",
+        email: "priya.sharma@devomgroup.in",
+        isSudo: false
+      };
+    }
+
+    if (!currentUser) {
+      if (errorMsg) errorMsg.style.display = 'block';
+      return;
+    }
+
+    // Save in session
+    sessionStorage.setItem('devom_current_user', JSON.stringify(currentUser));
+
+    // Update Layout Profile Info
+    document.getElementById('current-user-avatar').textContent = currentUser.avatar;
+    document.getElementById('current-user-name').textContent = currentUser.name;
+    document.querySelector('.sidebar-profile p').textContent = currentUser.role;
+
+    // Set Sidebar Agent link visibility
+    const agentLink = document.querySelector('.sidebar-item[data-page="agents"]');
+    if (agentLink) {
+      agentLink.style.display = currentUser.isSudo ? 'block' : 'none';
+    }
+
     // Animate transition out
     const card = loginRoot.querySelector('.card');
     card.style.animation = 'loginCardOut 0.5s var(--ease-expo) forwards';
@@ -148,6 +223,22 @@ function renderLogin() {
 // Bind router events
 window.addEventListener('hashchange', navigate);
 window.addEventListener('DOMContentLoaded', () => {
+  // If session is already open, auto-login
+  const sessionUserStr = sessionStorage.getItem('devom_current_user');
+  if (sessionUserStr) {
+    const user = JSON.parse(sessionUserStr);
+    isAuthenticated = true;
+    
+    document.getElementById('current-user-avatar').textContent = user.avatar;
+    document.getElementById('current-user-name').textContent = user.name;
+    document.querySelector('.sidebar-profile p').textContent = user.role;
+
+    const agentLink = document.querySelector('.sidebar-item[data-page="agents"]');
+    if (agentLink) {
+      agentLink.style.display = user.isSudo ? 'block' : 'none';
+    }
+  }
+
   navigate();
 
   // Bind close drawer listener
@@ -165,6 +256,7 @@ window.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', (e) => {
       e.preventDefault();
       isAuthenticated = false;
+      sessionStorage.removeItem('devom_current_user');
       window.location.hash = '';
       renderLogin();
     });

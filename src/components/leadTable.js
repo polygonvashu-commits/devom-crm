@@ -1,6 +1,8 @@
-import { mockLeads } from '../data/mockLeads.js';
+import { mockLeads, saveLeadsToStorage } from '../data/mockLeads.js';
 import { mockAgents } from '../data/mockAgents.js';
 import { openLeadDetail } from './leadDetail.js';
+import { calculateLeadScore, getScoreLabel } from '../utils/leadScoring.js';
+import { roundRobin } from '../utils/roundRobin.js';
 
 let currentFilters = {
   search: '',
@@ -130,6 +132,115 @@ export function renderLeadsTable(container) {
 
   document.getElementById('btn-apply-bulk').addEventListener('click', applyBulkAssignment);
 
+  // Add Lead Modal handlers
+  const addModal = document.getElementById('add-lead-modal');
+  const addLeadBtn = document.getElementById('btn-add-lead-modal');
+  const closeAddModalBtn = document.getElementById('close-add-modal');
+  const addForm = document.getElementById('add-lead-form');
+
+  if (addLeadBtn && addModal) {
+    addLeadBtn.addEventListener('click', () => {
+      addModal.style.display = 'flex';
+    });
+  }
+
+  const closeAddModal = () => {
+    if (addModal) {
+      addModal.style.display = 'none';
+      if (addForm) addForm.reset();
+    }
+  };
+
+  if (closeAddModalBtn) {
+    closeAddModalBtn.addEventListener('click', closeAddModal);
+  }
+
+  if (addModal) {
+    addModal.addEventListener('click', (e) => {
+      if (e.target === addModal) closeAddModal();
+    });
+  }
+
+  if (addForm) {
+    // Prevent duplicate submits by cloning form
+    const newForm = addForm.cloneNode(true);
+    addForm.parentNode.replaceChild(newForm, addForm);
+    
+    newForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('add-lead-name').value.trim();
+      const email = document.getElementById('add-lead-email').value.trim();
+      const phone = document.getElementById('add-lead-phone').value.trim();
+      const intent = document.getElementById('add-lead-intent').value;
+      const budget = document.getElementById('add-lead-budget').value;
+      const location = document.getElementById('add-lead-location').value.trim();
+      const source = document.getElementById('add-lead-source').value;
+
+      // 1. Calculate score
+      const score = calculateLeadScore(intent, budget, source);
+      const scoreLabel = getScoreLabel(score);
+
+      // 2. Assign agent (Round Robin if active)
+      let assignedAgentId = null;
+      // Get round robin status (default true if switcher not on screen)
+      const rrSwitch = document.getElementById('rr-toggle-switch');
+      const isRRActive = rrSwitch ? rrSwitch.checked : true;
+
+      if (isRRActive) {
+        const assignedAgent = roundRobin.assignNextLead(name, intent);
+        if (assignedAgent) {
+          assignedAgentId = assignedAgent.id;
+          assignedAgent.activeLeads += 1;
+        }
+      }
+
+      // 3. Create lead
+      const newLead = {
+        id: `lead_${Date.now()}`,
+        name,
+        email,
+        phone,
+        source,
+        status: 'new',
+        score,
+        scoreLabel,
+        intent,
+        assignedAgent: assignedAgentId,
+        budget,
+        location,
+        createdAt: new Date().toISOString(),
+        lastContact: new Date().toISOString(),
+        propertyInterest: `Manually added lead for ${intent}`,
+        notes: 'Lead ingested manually.',
+        timeline: [
+          { date: new Date().toISOString(), type: 'system', text: 'Lead manually entered into Lead Hub.' }
+        ]
+      };
+
+      if (assignedAgentId) {
+        const agent = mockAgents.find(a => a.id === assignedAgentId);
+        newLead.timeline.unshift({
+          date: new Date().toISOString(),
+          type: 'system',
+          text: `Routed to ${agent.name} via Round-Robin`
+        });
+      }
+
+      // 4. Persist in localStorage
+      mockLeads.unshift(newLead);
+      saveLeadsToStorage();
+
+      // 5. Close and reload
+      closeAddModal();
+      renderRows();
+
+      // Trigger Toast
+      const agent = mockAgents.find(a => a.id === assignedAgentId);
+      triggerIngestedToast(newLead, agent);
+    });
+  }
+
   // Initial rows render
   renderRows();
 }
@@ -137,6 +248,8 @@ export function renderLeadsTable(container) {
 function renderRows() {
   const tbody = document.getElementById('leads-table-body');
   if (!tbody) return;
+
+  const currentUser = JSON.parse(sessionStorage.getItem('devom_current_user') || '{}');
 
   const filtered = mockLeads.filter(lead => {
     // 1. Search filter
@@ -155,7 +268,10 @@ function renderRows() {
     // 4. Score filter
     const matchesScore = currentFilters.score === 'all' || lead.scoreLabel === currentFilters.score;
 
-    return matchesSearch && matchesSource && matchesStatus && matchesScore;
+    // 5. RBAC filter: Non-sudo agents only see leads assigned to them (Priya is agent_2)
+    const matchesAgent = currentUser.isSudo || lead.assignedAgent === 'agent_2';
+
+    return matchesSearch && matchesSource && matchesStatus && matchesScore && matchesAgent;
   });
 
   if (filtered.length === 0) {
@@ -255,4 +371,41 @@ function applyBulkAssignment() {
 
   // Re-render table rows
   renderRows();
+}
+
+function triggerIngestedToast(lead, agent) {
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.bottom = '24px';
+  toast.style.right = '24px';
+  toast.style.background = 'rgba(15, 41, 66, 0.95)';
+  toast.style.backdropFilter = 'blur(20px)';
+  toast.style.border = '1px solid var(--accent-color)';
+  toast.style.boxShadow = '0 8px 32px rgba(9, 27, 46, 0.5)';
+  toast.style.borderRadius = '8px';
+  toast.style.padding = '16px 20px';
+  toast.style.zIndex = '99999';
+  toast.style.display = 'flex';
+  toast.style.gap = '12px';
+  toast.style.alignItems = 'center';
+  toast.style.animation = 'slideInToast 0.3s ease-out forwards';
+
+  const assignmentText = agent ? `Assigned to <strong>${agent.name}</strong>` : 'Unassigned';
+
+  toast.innerHTML = `
+    <div style="font-size: 24px; color: var(--accent-color);"><i class="fa-regular fa-bell"></i></div>
+    <div>
+      <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 2px;">Lead Ingested Successfully!</h4>
+      <p style="font-size: 12px; color: var(--text-muted);">${lead.name} (${lead.intent}) • Score: <strong>${lead.score}</strong> • ${assignmentText}</p>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'slideInToast 0.3s ease-out reverse';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 4000);
 }

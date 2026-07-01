@@ -32,11 +32,16 @@ function renderColumns() {
   const container = document.getElementById('kanban-board-container');
   if (!container) return;
 
+  const currentUser = JSON.parse(sessionStorage.getItem('devom_current_user') || '{}');
   let grandTotalValue = 0;
 
   const columnsHtml = COLUMNS.map(col => {
-    // Filter leads matching this column's status
-    const columnLeads = mockLeads.filter(lead => col.statuses.includes(lead.status));
+    // Filter leads matching this column's status and RBAC rules
+    const columnLeads = mockLeads.filter(lead => {
+      const matchesStatus = col.statuses.includes(lead.status);
+      const matchesAgent = currentUser.isSudo || lead.assignedAgent === 'agent_2';
+      return matchesStatus && matchesAgent;
+    });
     
     // Calculate total value for this column
     const columnTotalValue = columnLeads.reduce((sum, lead) => {

@@ -104,6 +104,77 @@
     </div>
   </div>
 
+  <!-- Add Lead Modal -->
+  <div id="add-lead-modal" class="detail-overlay" style="display: none; align-items: center; justify-content: center; background: rgba(9, 27, 46, 0.75);">
+    <div class="card" style="width: 500px; padding: 30px; position: relative;">
+      <button class="detail-close" id="close-add-modal" style="top: 16px; right: 16px;">&times;</button>
+      <h3 style="font-family: var(--font-headline); color: var(--accent-color); margin-bottom: 20px; font-size: 20px;">
+        <i class="fa-solid fa-user-plus"></i> Add New Lead
+      </h3>
+      
+      <form id="add-lead-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Full Name</label>
+          <input type="text" id="add-lead-name" class="form-control" required placeholder="e.g. Aditya Chopra">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Email</label>
+            <input type="email" id="add-lead-email" class="form-control" required placeholder="name@email.com">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Phone</label>
+            <input type="text" id="add-lead-phone" class="form-control" required placeholder="+91 XXXXX XXXXX">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Property Intent</label>
+            <select id="add-lead-intent" class="form-control">
+              <option value="Luxury Villa">Luxury Villa</option>
+              <option value="Premium Apartment">Premium Apartment</option>
+              <option value="Commercial Space">Commercial Space</option>
+              <option value="Plots & Land">Plots & Land</option>
+              <option value="General Inquiry">General Inquiry</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Budget</label>
+            <select id="add-lead-budget" class="form-control">
+              <option value="₹1.5 - 2.0 Cr">₹1.5 - 2.0 Cr</option>
+              <option value="₹2.2 - 2.8 Cr">₹2.2 - 2.8 Cr</option>
+              <option value="₹3.5 - 4.5 Cr">₹3.5 - 4.5 Cr</option>
+              <option value="₹5.5 - 6.5 Cr">₹5.5 - 6.5 Cr</option>
+              <option value="₹8.0 - 10.0 Cr">₹8.0 - 10.0 Cr</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Location</label>
+            <input type="text" id="add-lead-location" class="form-control" required placeholder="e.g. Gurgaon, Haryana">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Source</label>
+            <select id="add-lead-source" class="form-control">
+              <option value="website">Website Form</option>
+              <option value="meta_ads">Meta Ads</option>
+              <option value="google_ads">Google Ads</option>
+              <option value="social_media">Social Media DM</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px; width: 100%; justify-content: center;">
+          <i class="fa-solid fa-plus"></i> Ingest Lead
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script type="module" src="/src/main.js"></script>
 </body>

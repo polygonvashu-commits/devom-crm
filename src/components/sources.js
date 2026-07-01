@@ -1,4 +1,4 @@
-import { mockLeads } from '../data/mockLeads.js';
+import { mockLeads, saveLeadsToStorage } from '../data/mockLeads.js';
 import { calculateLeadScore, getScoreLabel } from '../utils/leadScoring.js';
 import { roundRobin } from '../utils/roundRobin.js';
 import { mockAgents } from '../data/mockAgents.js';
@@ -245,6 +245,7 @@ export function renderSourcesPanel(container) {
 
     // Push to lead roster
     mockLeads.unshift(newLead);
+    saveLeadsToStorage();
 
     // Flash/Notify user
     triggerNotificationToast(newLead, assignedAgent);

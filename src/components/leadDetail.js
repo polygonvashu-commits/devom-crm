@@ -1,5 +1,5 @@
 import { mockAgents } from '../data/mockAgents.js';
-import { mockLeads } from '../data/mockLeads.js';
+import { mockLeads, saveLeadsToStorage } from '../data/mockLeads.js';
 
 let onCloseCallback = null;
 
@@ -160,6 +160,7 @@ export function openLeadDetail(lead, onClose) {
       if (oldAgent) oldAgent.activeLeads = Math.max(0, oldAgent.activeLeads - 1);
     }
 
+    saveLeadsToStorage();
     openLeadDetail(lead, onCloseCallback); // refresh panel
   });
 
@@ -179,6 +180,7 @@ export function openLeadDetail(lead, onClose) {
       text: `New note added: "${noteText}"`
     });
 
+    saveLeadsToStorage();
     noteInput.value = '';
     openLeadDetail(lead, onCloseCallback); // refresh panel
   });

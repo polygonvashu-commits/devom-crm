@@ -258,3 +258,21 @@ for (let i = 9; i <= 55; i++) {
     ]
   });
 }
+
+export function saveLeadsToStorage() {
+  localStorage.setItem('devom_leads', JSON.stringify(mockLeads));
+}
+
+// Initialize from storage if present
+const storedLeads = localStorage.getItem('devom_leads');
+if (storedLeads) {
+  try {
+    const parsed = JSON.parse(storedLeads);
+    mockLeads.length = 0;
+    mockLeads.push(...parsed);
+  } catch (e) {
+    console.error("Failed to load leads from localStorage, using defaults.", e);
+  }
+} else {
+  saveLeadsToStorage();
+}

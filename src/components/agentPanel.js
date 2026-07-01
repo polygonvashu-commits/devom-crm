@@ -1,5 +1,5 @@
 import { mockAgents } from '../data/mockAgents.js';
-import { mockLeads } from '../data/mockLeads.js';
+import { mockLeads, saveLeadsToStorage } from '../data/mockLeads.js';
 import { roundRobin } from '../utils/roundRobin.js';
 
 let agentPerformanceChart = null;
@@ -175,6 +175,7 @@ export function renderAgentPanel(container) {
         if (oldAgent) oldAgent.activeLeads = Math.max(0, oldAgent.activeLeads - 1);
       }
 
+      saveLeadsToStorage();
       alert(`Lead "${lead.name}" has been successfully assigned to ${agent.name}.`);
 
       // Refresh panel
