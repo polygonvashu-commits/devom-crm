@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DEV OM Group — Luxury Real Estate CRM</title>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- ChartJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/src/styles/index.css">
+</head>
+<body>
+  
+  <div id="login-root" style="display: none;">
+    <!-- Render login screen when not authenticated -->
+  </div>
+
+  <div id="app-root" class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>DEV OM Group</h1>
+        <span>Luxury Real Estate</span>
+      </div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-item" data-page="dashboard">
+          <a href="#dashboard" class="sidebar-link">
+            <i class="fa-solid fa-chart-line"></i> Dashboard
+          </a>
+        </li>
+        <li class="sidebar-item" data-page="leads">
+          <a href="#leads" class="sidebar-link">
+            <i class="fa-solid fa-users"></i> Lead Hub
+          </a>
+        </li>
+        <li class="sidebar-item" data-page="pipeline">
+          <a href="#pipeline" class="sidebar-link">
+            <i class="fa-solid fa-diagram-project"></i> Sales Pipeline
+          </a>
+        </li>
+        <li class="sidebar-item" data-page="agents">
+          <a href="#agents" class="sidebar-link">
+            <i class="fa-solid fa-user-tie"></i> Agent Engine
+          </a>
+        </li>
+        <li class="sidebar-item" data-page="sources">
+          <a href="#sources" class="sidebar-link">
+            <i class="fa-solid fa-circle-nodes"></i> Lead Sources
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-profile">
+        <div class="profile-avatar" id="current-user-avatar">NR</div>
+        <div class="profile-info">
+          <h4 id="current-user-name">Naveen Rathee</h4>
+          <p>Super Administrator</p>
+        </div>
+        <a href="#logout" style="margin-left: auto; color: var(--text-muted); cursor: pointer;" id="logout-btn" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top header bar -->
+      <header class="header-bar">
+        <div class="header-title" style="display: flex; align-items: center; gap: 16px;">
+          <button id="sidebar-toggle" class="btn btn-secondary" style="display: none; padding: 10px 14px; font-size: 16px;"><i class="fa-solid fa-bars"></i></button>
+          <h2 id="view-title">Dashboard</h2>
+        </div>
+        <div class="header-actions">
+          <div style="position: relative;">
+            <input type="text" id="global-search" class="form-control" placeholder="Search leads, agents..." style="width: 250px; padding-left: 36px;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+          </div>
+          <button class="btn btn-secondary" style="position: relative;" id="notification-btn">
+            <i class="fa-regular fa-bell"></i>
+            <span style="position: absolute; top: -5px; right: -5px; background: var(--accent-color); color: var(--primary-dark); font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">4</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div id="view-container" class="page-container">
+        <!-- Views will inject here dynamically -->
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Detail Slideout Drawer Overlay -->
+  <div id="detail-drawer" class="detail-overlay">
+    <div class="detail-panel">
+      <button class="detail-close" id="close-drawer">&times;</button>
+      <div id="detail-content">
+        <!-- Dynamic Lead Details -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
